@@ -5,11 +5,15 @@ DROP TABLE IF EXISTS t1;
 
 --enable_warnings
 CREATE TABLE t1 (c1 INT);
---connection conn1
 INSERT INTO t1 values (1);
+-- echo connection conn1
+connect (con1,localhost,root,,);
 SET DEBUG_SYNC= 'await_insert WAIT_FOR now_select';
-send SELECT c1 from t1 where c1=1;
+INSERT INTO t1 values (1);
+
 SET DEBUG_SYNC= 'after_insert SIGNAL now_select';
-error ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION
+send SELECT c1 from t1 where c1=1;
+reap;
+error 25006
 INSERT INTO t1 values (2);
 DROP TABLE t1;
