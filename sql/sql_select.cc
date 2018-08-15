@@ -1166,6 +1166,9 @@ mysql_select(THD *thd,
   ORDER *first_group= NULL;
   DBUG_ENTER("mysql_select");
 
+#if defined(ENABLE_DEBUG_SYNC)
+  DEBUG_SYNC(thd, "after_insert");
+#endif
   ++wild_experiment_number_of_selects;
 
   if (order)

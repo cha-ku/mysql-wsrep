@@ -708,6 +708,9 @@ bool mysql_insert(THD *thd,TABLE_LIST *table_list,
 
   if (wild_experiment_number_of_selects_orig != wild_experiment_number_of_selects)
   {
+    #if defined(ENABLE_DEBUG_SYNC)
+        DEBUG_SYNC(thd, "await_insert");
+    #endif
     my_error(ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION, MYF(0));
     DBUG_RETURN(TRUE);
   }
