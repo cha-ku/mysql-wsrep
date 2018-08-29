@@ -1,3 +1,21 @@
+# More importantly, I did not try it, but I guess that INSERT in your test
+# does not fail? It should. In general the synchonization between the two
+# threads should go like this:
+#
+# 1. You plant something so that the command from 2. would signal that it
+#    has reached the critical section and would start waiting there for a
+#    signal to continue. This signal would designate that a damage from
+#    another thread was done.
+# 2. Start the vulnerable command. Because of 1. it would wait and so it
+#    needs to be executed with "-- send" from the mtr test.
+# 3. Wait for the command from 2. to signal it has reached the critical
+#    section (and is waiting).
+# 4. Execute another command from another connection that would do some
+#    damage. When that command ends you know the damage has been done and
+#    that the command from 2. is still in the critical section, waiting.
+# 5. Send the signal which the command from 2. is expecting so that it can
+#    continue and observe the changes made by the other command.
+
 --source include/have_debug_sync.inc
 
 --disable_warnings
@@ -6,14 +24,16 @@ DROP TABLE IF EXISTS t1;
 --enable_warnings
 CREATE TABLE t1 (c1 INT);
 INSERT INTO t1 values (1);
--- echo connection conn1
-connect (con1,localhost,root,,);
+--echo connection conn1
+connect (conn1,localhost,root,,);
 SET DEBUG_SYNC= 'await_insert WAIT_FOR now_select';
-INSERT INTO t1 values (1);
+--send SELECT c1 from t1 where c1=1;
 
+--echo connection conn2
+connect (conn2,localhost,root,,);
 SET DEBUG_SYNC= 'after_insert SIGNAL now_select';
-send SELECT c1 from t1 where c1=1;
+--send INSERT INTO t1 values(2);
 reap;
-error 25006
-INSERT INTO t1 values (2);
+--error 25006
+SELECT c1 from t1 where c1=2;
 DROP TABLE t1;
